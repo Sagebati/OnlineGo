@@ -52,7 +52,7 @@ class OGSRestService(
                         throw HttpException(Response.error<Any>(403, "login failed".toResponseBody()))
                     }
                 }
-                .doOnSuccess (userSessionRepository::storeUIConfig)
+                .doOnSuccess(userSessionRepository::storeUIConfig)
                 .ignoreElement()
                 .doAfterTerminate { idlingResource.decrement() }
     }
@@ -60,11 +60,11 @@ class OGSRestService(
     fun loginWithGoogle(code: String): Completable {
         return restApi.initiateGoogleAuthFlow()
                 .map {
-                    if(it.code() != 302) {
+                    if (it.code() != 302) {
                         throw Exception("got code ${it.code()} instead of 302")
                     }
                     it.headers().forEach {
-                        if(it.first == "location") {
+                        if (it.first == "location") {
                             return@map "&state=([^&]*)&".toRegex().find(it.second)!!.groupValues[1]
                         }
                     }
@@ -72,15 +72,15 @@ class OGSRestService(
                 }
                 .flatMap { state -> restApi.loginWithGoogleAuth(code, state) }
                 .flatMap {
-                    if(it.code() != 302) {
+                    if (it.code() != 302) {
                         throw Exception("got code ${it.code()} instead of 302")
                     }
                     it.headers().forEach {
-                        if(it.first == "location" && it.second == "/") {
+                        if (it.first == "location" && it.second == "/") {
                             return@flatMap restApi.uiConfig()
                         }
                     }
-                    throw Exception ("Login failed")
+                    throw Exception("Login failed")
                 }
                 .doOnSuccess(userSessionRepository::storeUIConfig)
                 .ignoreElement()
@@ -92,21 +92,21 @@ class OGSRestService(
     }
 
     fun challengeBot(challengeParams: ChallengeParams): Completable {
-        val size = when(challengeParams.size) {
+        val size = when (challengeParams.size) {
             "9x9" -> 9
             "13x13" -> 13
             "19x19" -> 19
             else -> 19
         }
 
-        val color = when(challengeParams.color) {
+        val color = when (challengeParams.color) {
             "Auto" -> "automatic"
             "Black" -> "black"
             "White" -> "white"
             else -> "automatic"
         }
 
-        val timeControl = when(challengeParams.speed.toLowerCase()) {
+        val timeControl = when (challengeParams.speed.toLowerCase()) {
             "correspondence" -> TimeControl(
                     system = "byoyomi",
                     time_control = "byoyomi",
@@ -116,6 +116,7 @@ class OGSRestService(
                     periods = 5,
                     pause_on_weekends = true
             )
+
             "live" -> TimeControl(
                     system = "byoyomi",
                     time_control = "byoyomi",
@@ -125,6 +126,7 @@ class OGSRestService(
                     periods = 5,
                     pause_on_weekends = false
             )
+
             "blitz" -> TimeControl(
                     system = "byoyomi",
                     time_control = "byoyomi",
@@ -134,6 +136,7 @@ class OGSRestService(
                     periods = 5,
                     pause_on_weekends = false
             )
+
             else -> TimeControl()
         }
         val request = OGSChallengeRequest(
@@ -141,7 +144,7 @@ class OGSRestService(
                 aga_ranked = false,
                 challenger_color = color,
                 game = OGSChallengeRequest.Game(
-                        handicap = if(challengeParams.handicap == "Auto") "-1" else challengeParams.handicap,
+                        handicap = if (challengeParams.handicap == "Auto") "-1" else challengeParams.handicap,
                         ranked = challengeParams.ranked,
                         name = if (challengeParams.opponent?.ui_class != null &&
                                 challengeParams.opponent?.ui_class!!.startsWith("bot")) "Bot Match"
@@ -163,6 +166,7 @@ class OGSRestService(
             challengeParams.opponent != null -> {
                 restApi.challengePlayer(challengeParams.opponent?.id!!, request)
             }
+
             else -> {
                 restApi.openChallenge(request)
             }
@@ -202,14 +206,14 @@ class OGSRestService(
             restApi.fetchChallenges().map { it.results }
 
     fun fetchHistoricGamesBefore(beforeDate: Long?): Single<List<OGSGame>> =
-            if(beforeDate == null) {
+            if (beforeDate == null) {
                 restApi.fetchPlayerFinishedGames(userSessionRepository.userId!!)
             } else {
                 restApi.fetchPlayerFinishedBeforeGames(userSessionRepository.userId!!, 10, beforeDate.microsToISODateTime(), 1)
             }.map { it.results }
 
     fun fetchHistoricGamesAfter(afterDate: Long?): Single<List<OGSGame>> =
-            if(afterDate == null) {
+            if (afterDate == null) {
                 restApi.fetchPlayerFinishedGames(userSessionRepository.userId!!)
             } else {
                 restApi.fetchPlayerFinishedAfterGames(userSessionRepository.userId!!, 10, afterDate.microsToISODateTime(), 1)
@@ -227,6 +231,11 @@ class OGSRestService(
     fun getPlayerStats(id: Long): Single<Glicko2History> {
         return restApi.getPlayerStats(id)
     }
+
+    fun library(): Single<List<SgfGame>> =
+            restApi.library(userSessionRepository.userId!!)
+
+    fun upload_sgf(): Completable = restApi.upload_sgf()
 
     suspend fun getPlayerStatsAsync(id: Long): Glicko2History {
         return restApi.getPlayerStatsAsync(id)

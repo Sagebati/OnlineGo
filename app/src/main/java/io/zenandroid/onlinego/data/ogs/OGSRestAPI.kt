@@ -93,6 +93,12 @@ interface OGSRestAPI {
 
     @GET("termination-api/my/game-chat-history-since/{last_message_id}")
     fun getMessages(@Path("last_message_id") lastMessageId: String): Single<List<Chat>>
+
+    @POST("http://online-go.com/api/v1/me/games/sgf/")
+    fun upload_sgf(): Completable
+
+    @GET("https://online-go.com/library/{player_id}")
+    fun library(@Path("player_id") playerId: Long): Single<List<SgfGame>>
 }
 
 /*
